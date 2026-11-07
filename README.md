@@ -1,6 +1,6 @@
 # YouTube Clone
 
-Skeleton FastAPI-приложения YouTube-клона: async SQLAlchemy + PostgreSQL,
+Полнофункциональное демо YouTube-клона: async SQLAlchemy + PostgreSQL,
 Alembic, MinIO (S3), ARQ + Redis, JWT-аутентификация и Jinja2-фронтенд.
 
 ## Стек
@@ -10,24 +10,32 @@ Alembic, MinIO (S3), ARQ + Redis, JWT-аутентификация и Jinja2-ф�
 - Pytest + pytest-asyncio + httpx, Ruff
 - Docker Compose (backend + worker + postgres + redis + minio)
 
-## Быстрый старт
+## Быстрый старт (одна команда)
 
 ```bash
-cp .env.example .env
-docker compose up -d --build
+cp .env.example .env   # опционально: compose имеет dev-дефолты
+docker compose up -d --build && docker compose exec backend alembic upgrade head && docker compose exec backend python scripts/seed_demo.py
+```
+
+После выполнения откройте <http://localhost:8000> — в ленте будут 5 демо-видео.
+Проверить статусы:
+
+```bash
+docker compose ps
 curl http://localhost:8000/health
 # {"status":"ok"}
 ```
 
-Проверить миграции и статус сервисов:
+### Демо-пользователи
 
-```bash
-docker compose exec backend alembic upgrade head
-docker compose ps
-```
+| Роль | Email | Пароль |
+|------|-------|--------|
+| admin | `admin@example.com` | `Admin12345!` |
+| moderator | `moderator@example.com` | `Moderator12345!` |
+| user | `user@example.com` | `User12345!` |
 
 Swagger: <http://localhost:8000/docs>, OpenAPI: <http://localhost:8000/openapi.json>.
-MinIO Console: <http://localhost:9001> (minioadmin / change-me-minio по умолчанию).
+MinIO Console: <http://localhost:9001> (`minioadmin` / `change-me-minio` по умолчанию).
 
 ## Аутентификация (демо)
 
@@ -183,6 +191,7 @@ app/
   workers/         # ARQ WorkerSettings и process_video
 alembic/           # миграции схемы и refresh-токенов
 frontend/          # Jinja2-шаблоны, upload/watch UI и static
+scripts/           # seed_demo.py для демо-данных
 tests/             # pytest + httpx
 docs/              # CHANGELOG и архитектура
 ```
