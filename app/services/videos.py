@@ -7,11 +7,14 @@ import uuid
 from dataclasses import dataclass
 from datetime import timedelta
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.models import User, Video, VideoStatus, Visibility
 from app.repositories import likes as like_repo
+from app.repositories import users as user_repo
+from app.repositories import video_access as video_access_repo
 from app.repositories import videos as video_repo
 from app.schemas.video import (
     VideoDetailOut,
@@ -49,6 +52,10 @@ class QueueUnavailableError(VideoUploadError):
 
 class AccessDeniedError(VideoUploadError):
     """Raised when a private video is requested by a non-owner."""
+
+
+class TargetUserNotFoundError(VideoUploadError):
+    """Raised when an access grant targets an unknown user."""
 
 
 @dataclass(frozen=True)
@@ -169,12 +176,20 @@ async def get_playback_url(minio_client, bucket: str, video: Video) -> str | Non
     return await storage.presigned_get_url(minio_client, bucket, video.storage_key)
 
 
-def can_view_video(video: Video, user: User | None) -> bool:
-    """Apply visibility rules for direct video/comments access."""
+async def can_view_video(
+    session: AsyncSession,
+    video: Video,
+    user: User | None,
+) -> bool:
+    """Apply visibility and explicit video_access rules."""
 
-    if video.visibility is Visibility.PRIVATE:
-        return user is not None and user.id == video.owner_id
-    return True
+    if video.visibility is not Visibility.PRIVATE:
+        return True
+    if user is None:
+        return False
+    if user.id == video.owner_id:
+        return True
+    return await video_access_repo.has_access(session, video.id, user.id)
 
 
 async def get_video_for_view(
@@ -187,7 +202,7 @@ async def get_video_for_view(
     video = await video_repo.get_with_owner(session, video_id)
     if video is None:
         raise VideoNotFoundError("Video not found")
-    if not can_view_video(video, user):
+    if not await can_view_video(session, video, user):
         raise AccessDeniedError("Access denied")
     return video
 
@@ -209,6 +224,29 @@ async def _get_url(
     )
 
 
+async def build_feed_items(
+    session: AsyncSession,
+    videos: list[Video],
+    minio_client,
+    bucket: str,
+) -> list[VideoFeedItem]:
+    """Enrich video rows with thumbnails, owner names and like counts."""
+
+    counts = await like_repo.counts_for_videos(session, [video.id for video in videos])
+    items: list[VideoFeedItem] = []
+    for video in videos:
+        base = VideoOut.model_validate(video).model_dump()
+        items.append(
+            VideoFeedItem(
+                **base,
+                owner_username=video.owner.username if video.owner else None,
+                thumbnail_url=await _get_url(minio_client, bucket, video.thumbnail_key),
+                like_count=counts.get(video.id, 0),
+            )
+        )
+    return items
+
+
 async def list_feed(
     session: AsyncSession,
     page: int,
@@ -221,19 +259,7 @@ async def list_feed(
     offset = (page - 1) * size
     videos = await video_repo.list_public_ready(session, offset, size)
     total = await video_repo.count_public_ready(session)
-    counts = await like_repo.counts_for_videos(session, [video.id for video in videos])
-
-    items: list[VideoFeedItem] = []
-    for video in videos:
-        base = VideoOut.model_validate(video).model_dump()
-        items.append(
-            VideoFeedItem(
-                **base,
-                owner_username=video.owner.username if video.owner else None,
-                thumbnail_url=await _get_url(minio_client, bucket, video.thumbnail_key),
-                like_count=counts.get(video.id, 0),
-            )
-        )
+    items = await build_feed_items(session, videos, minio_client, bucket)
     return items, total
 
 
@@ -265,3 +291,47 @@ async def get_video_detail(
         playback_url=playback_url,
         liked=liked,
     )
+
+
+async def grant_video_access(
+    session: AsyncSession,
+    owner: User,
+    video_id: uuid.UUID,
+    target_user_id: uuid.UUID,
+) -> None:
+    """Allow one user to view a private video (owner only)."""
+
+    video = await video_repo.get_with_owner(session, video_id)
+    if video is None:
+        raise VideoNotFoundError("Video not found")
+    if video.owner_id != owner.id:
+        raise AccessDeniedError("Only the video owner can manage access")
+
+    target = await user_repo.get_by_id(session, target_user_id)
+    if target is None:
+        raise TargetUserNotFoundError("User not found")
+
+    if not await video_access_repo.has_access(session, video.id, target.id):
+        video_access_repo.add_access(session, video.id, target.id)
+        try:
+            await session.commit()
+        except IntegrityError:
+            await session.rollback()
+
+
+async def revoke_video_access(
+    session: AsyncSession,
+    owner: User,
+    video_id: uuid.UUID,
+    target_user_id: uuid.UUID,
+) -> None:
+    """Remove one user's access to a private video (owner only)."""
+
+    video = await video_repo.get_with_owner(session, video_id)
+    if video is None:
+        raise VideoNotFoundError("Video not found")
+    if video.owner_id != owner.id:
+        raise AccessDeniedError("Only the video owner can manage access")
+
+    await video_access_repo.remove_access(session, video.id, target_user_id)
+    await session.commit()

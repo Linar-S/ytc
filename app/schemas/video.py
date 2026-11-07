@@ -104,3 +104,17 @@ class LikeStatusResponse(BaseModel):
 
     liked: bool
     like_count: int
+
+
+class VideoAccessRequest(BaseModel):
+    """User that should receive or lose access to a private video."""
+
+    user_id: UUID
+
+
+class VideoAccessResponse(BaseModel):
+    """Result of granting or revoking private-video access."""
+
+    video_id: UUID
+    user_id: UUID
+    granted: bool

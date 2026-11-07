@@ -10,6 +10,7 @@ from app.schemas.auth import (
     TokenPair,
     TokenResponse,
 )
+from app.schemas.channel import ChannelOut, SubscribeResponse
 from app.schemas.comment import (
     CommentCreate,
     CommentOut,
@@ -23,6 +24,8 @@ from app.schemas.user import UserCreate, UserOut, UserUpdate
 from app.schemas.video import (
     LikeStatusResponse,
     PaginatedVideos,
+    VideoAccessRequest,
+    VideoAccessResponse,
     VideoCreate,
     VideoDetailOut,
     VideoFeedItem,
@@ -33,6 +36,7 @@ from app.schemas.video import (
 )
 
 __all__ = [
+    "ChannelOut",
     "CommentCreate",
     "CommentOut",
     "CommentUpdate",
@@ -48,6 +52,7 @@ __all__ = [
     "RefreshTokenRequest",
     "ReportCreate",
     "ReportOut",
+    "SubscribeResponse",
     "SubscriptionCreate",
     "SubscriptionOut",
     "TokenPair",
@@ -56,6 +61,8 @@ __all__ = [
     "UserOut",
     "UserRole",
     "UserUpdate",
+    "VideoAccessRequest",
+    "VideoAccessResponse",
     "VideoCreate",
     "VideoDetailOut",
     "VideoFeedItem",
