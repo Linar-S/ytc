@@ -30,14 +30,14 @@
 
     <div class="p-5 sm:p-6">
       <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 class="text-xl font-bold tracking-tight sm:text-2xl">{{ video.title }}</h1>
+        <div class="min-w-0">
+          <h1 class="break-words text-xl font-bold tracking-tight sm:text-2xl">{{ video.title }}</h1>
           <p class="mt-1 text-sm text-gray-500">
             <a href="/channel/{{ video.owner_id }}" class="font-medium text-gray-700 hover:text-red-600">{{ video.owner_username or "Автор" }}</a> · {{ video.created_at.strftime("%d.%m.%Y %H:%M") }}
             · {{ video.views_count }} просмотров
           </p>
         </div>
-        <div class="flex items-center gap-2">
+        <div class="flex w-full items-center gap-2 sm:w-auto">
           <button id="like-button" type="button" data-liked="{{ 'true' if video.liked else 'false' }}"
                   class="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100">
             <span id="like-icon">♥</span>
@@ -48,7 +48,7 @@
       </div>
 
       {% if video.description %}
-        <p class="mt-4 whitespace-pre-line text-sm text-gray-700 sm:text-base">{{ video.description }}</p>
+        <p class="mt-4 break-words whitespace-pre-line text-sm text-gray-700 sm:text-base">{{ video.description }}</p>
       {% endif %}
 
       <div class="mt-4 flex flex-col gap-2 rounded-lg border border-red-100 bg-red-50 p-4 sm:flex-row sm:items-center">
@@ -62,7 +62,7 @@
         <button id="report-button" type="button" class="inline-flex items-center justify-center rounded-lg border border-red-300 px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-100">
           Отправить жалобу
         </button>
-        <p id="report-status" class="text-xs text-red-800"></p>
+        <p id="report-status" class="break-words text-xs text-red-800"></p>
       </div>
       <div class="mt-6 rounded-lg border border-amber-200 bg-amber-50 p-4">
         <label for="watch-token" class="block text-sm font-medium text-amber-900">Access token для лайка и комментария</label>
@@ -97,7 +97,7 @@
             <p class="text-sm font-semibold text-gray-900">{{ comment.author_username or "Пользователь" }}</p>
             <p class="text-xs text-gray-500">{{ comment.created_at.strftime("%d.%m.%Y %H:%M") }}</p>
           </div>
-          <p class="mt-2 whitespace-pre-line text-sm text-gray-700">{{ comment.content }}</p>
+          <p class="mt-2 break-words whitespace-pre-line text-sm text-gray-700">{{ comment.content }}</p>
         </article>
       {% else %}
         <p class="text-sm text-gray-500">Комментариев пока нет.</p>
