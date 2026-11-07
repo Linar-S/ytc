@@ -15,7 +15,13 @@ from app.schemas.like import LikeCreate, LikeOut
 from app.schemas.report import ReportCreate, ReportOut
 from app.schemas.subscription import SubscriptionCreate, SubscriptionOut
 from app.schemas.user import UserCreate, UserOut, UserUpdate
-from app.schemas.video import VideoCreate, VideoOut, VideoUpdate
+from app.schemas.video import (
+    VideoCreate,
+    VideoInitUploadRequest,
+    VideoInitUploadResponse,
+    VideoOut,
+    VideoUpdate,
+)
 
 __all__ = [
     "CommentCreate",
@@ -39,6 +45,8 @@ __all__ = [
     "UserRole",
     "UserUpdate",
     "VideoCreate",
+    "VideoInitUploadRequest",
+    "VideoInitUploadResponse",
     "VideoOut",
     "VideoStatus",
     "VideoUpdate",
