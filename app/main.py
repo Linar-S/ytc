@@ -15,7 +15,7 @@ from app.database import (
     get_session_factory,
     init_engine,
 )
-from app.routers import auth, health, pages, videos
+from app.routers import auth, channels, health, pages, videos
 from app.services import storage
 
 logger = logging.getLogger(__name__)
@@ -91,5 +91,6 @@ app.mount("/static", StaticFiles(directory=FRONTEND_DIR / "static"), name="stati
 
 app.include_router(health.router)
 app.include_router(auth.router)
+app.include_router(channels.router)
 app.include_router(videos.router)
 app.include_router(pages.router)

@@ -15,6 +15,7 @@ from app.config import settings
 from app.database import get_db
 from app.dependencies import get_optional_current_user
 from app.models import User
+from app.services import channels as channel_service
 from app.services import social as social_service
 from app.services import videos as video_service
 
@@ -101,5 +102,38 @@ async def watch_page(
             "thumbnail_url": detail.thumbnail_url,
             "comments": comments,
             "comment_total": comment_total,
+        },
+    )
+
+
+@router.get("/channel/{user_id}", response_class=HTMLResponse)
+async def channel_page(
+    user_id: uuid.UUID,
+    request: Request,
+    session: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User | None, Depends(get_optional_current_user)],
+) -> HTMLResponse:
+    """Render a channel page with visible videos and subscribe controls."""
+
+    try:
+        channel = await channel_service.get_channel(
+            session,
+            user_id,
+            current_user,
+            _optional_minio_client(request),
+            _bucket(request),
+        )
+    except channel_service.ChannelNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        ) from exc
+
+    return templates.TemplateResponse(
+        request=request,
+        name="channel.html",
+        context={
+            "channel": channel,
+            "is_owner": current_user is not None and current_user.id == channel.id,
         },
     )

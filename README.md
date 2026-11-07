@@ -104,6 +104,30 @@ curl -s -X POST http://localhost:8000/videos/<VIDEO_ID>/comments \
 
 Главная `/` показывает адаптивную сетку карточек (1 колонка на mobile,
 3–4 на desktop), `/watch/{id}` — video-тег, лайк, форму и список комментариев.
+## Каналы и доступ к private-видео
+
+```bash
+# Публичная информация о канале + видимые видео
+curl -s http://localhost:8000/channels/<USER_ID>
+
+# Подписка / отписка (идемпотентно, нужен auth)
+curl -s -X POST http://localhost:8000/channels/<USER_ID>/subscribe \
+  -H "Authorization: Bearer <ACCESS_TOKEN>"
+curl -s -X DELETE http://localhost:8000/channels/<USER_ID>/subscribe \
+  -H "Authorization: Bearer <ACCESS_TOKEN>"
+
+# Владелец private-видео выдаёт доступ пользователю B
+curl -s -X POST http://localhost:8000/videos/<VIDEO_ID>/access \
+  -H "Authorization: Bearer <OWNER_TOKEN>" \
+  -H "Content-Type: application/json" \
+  -d '{"user_id":"<USER_B_ID>"}'
+
+# После гранта B получает 200 на /videos/<VIDEO_ID>, C — 403
+```
+
+Страница `/channel/{id}` показывает шапку канала, кнопку подписки и адаптивную
+сетку видео. Владелец видит свои private-видео с бейджем «Приватное»; пользователь
+с выданным доступом тоже видит их после ввода access token.
 ## Локальная разработка
 
 ```bash

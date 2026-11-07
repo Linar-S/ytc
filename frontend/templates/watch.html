@@ -33,7 +33,7 @@
         <div>
           <h1 class="text-xl font-bold tracking-tight sm:text-2xl">{{ video.title }}</h1>
           <p class="mt-1 text-sm text-gray-500">
-            {{ video.owner_username or "Автор" }} · {{ video.created_at.strftime("%d.%m.%Y %H:%M") }}
+            <a href="/channel/{{ video.owner_id }}" class="font-medium text-gray-700 hover:text-red-600">{{ video.owner_username or "Автор" }}</a> · {{ video.created_at.strftime("%d.%m.%Y %H:%M") }}
             · {{ video.views_count }} просмотров
           </p>
         </div>

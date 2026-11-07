@@ -8,6 +8,7 @@ from app.models.report import Report
 from app.models.subscription import Subscription
 from app.models.user import User
 from app.models.video import Video
+from app.models.video_access import VideoAccess
 
 __all__ = [
     "Comment",
@@ -18,6 +19,7 @@ __all__ = [
     "User",
     "UserRole",
     "Video",
+    "VideoAccess",
     "VideoStatus",
     "Visibility",
 ]

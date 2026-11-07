@@ -16,6 +16,8 @@ from app.schemas.comment import CommentCreate, CommentOut, PaginatedComments
 from app.schemas.video import (
     LikeStatusResponse,
     PaginatedVideos,
+    VideoAccessRequest,
+    VideoAccessResponse,
     VideoDetailOut,
     VideoInitUploadRequest,
     VideoInitUploadResponse,
@@ -282,3 +284,62 @@ async def create_comment(
         current_user,
         payload.content,
     )
+
+
+@router.post("/{video_id}/access", response_model=VideoAccessResponse)
+async def grant_video_access(
+    video_id: uuid.UUID,
+    payload: VideoAccessRequest,
+    session: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> VideoAccessResponse:
+    """Allow one user to view a private video (owner only)."""
+
+    try:
+        await video_service.grant_video_access(session, current_user, video_id, payload.user_id)
+    except video_service.VideoNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    except video_service.TargetUserNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    except video_service.AccessDeniedError as exc:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)) from exc
+
+    return VideoAccessResponse(video_id=video_id, user_id=payload.user_id, granted=True)
+
+
+@router.delete("/{video_id}/access", response_model=VideoAccessResponse)
+async def revoke_video_access(
+    video_id: uuid.UUID,
+    payload: VideoAccessRequest,
+    session: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> VideoAccessResponse:
+    """Remove one user's access to a private video (owner only)."""
+
+    try:
+        await video_service.revoke_video_access(session, current_user, video_id, payload.user_id)
+    except video_service.VideoNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    except video_service.AccessDeniedError as exc:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)) from exc
+
+    return VideoAccessResponse(video_id=video_id, user_id=payload.user_id, granted=False)
+
+
+@router.delete("/{video_id}/access/{user_id}", response_model=VideoAccessResponse)
+async def revoke_video_access_by_path(
+    video_id: uuid.UUID,
+    user_id: uuid.UUID,
+    session: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> VideoAccessResponse:
+    """Path-parameter alias for revoking private-video access."""
+
+    try:
+        await video_service.revoke_video_access(session, current_user, video_id, user_id)
+    except video_service.VideoNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    except video_service.AccessDeniedError as exc:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)) from exc
+
+    return VideoAccessResponse(video_id=video_id, user_id=user_id, granted=False)
