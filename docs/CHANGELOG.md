@@ -18,7 +18,11 @@
 - зависимости `get_current_user` и `require_role` с проверкой ролей
 - bcrypt-хеширование паролей и refresh-token storage с отзывом старых токенов
 - Alembic-миграция `0003_refresh_tokens`
-- тесты моделей, каскадного удаления и auth-сценариев
+- direct-to-MinIO загрузка видео через presigned PUT URL
+- endpoints `/videos/init-upload` и `/videos/{id}/complete-upload`
+- ARQ-задача `process_video` с placeholder-превью и статусом `ready`
+- страницы `/upload` (XHR progress bar) и `/watch/{id}` с presigned GET URL
+- тесты моделей, auth-сценариев и загрузки видео с mock MinIO
 - заготовки frontend-шаблонов и статики
 
 ## [0.1.0] - 2026-11-07

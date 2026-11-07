@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block title %}{{ video.title }} — YouTube-клон{% endblock %}
+
+{% block content %}
+<section class="mx-auto max-w-4xl">
+  <div class="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+    {% if playback_url %}
+      <video class="aspect-video w-full bg-black" controls preload="metadata"
+             {% if thumbnail_url %}poster="{{ thumbnail_url }}"{% endif %}>
+        <source src="{{ playback_url }}" type="video/mp4">
+        Ваш браузер не поддерживает воспроизведение видео.
+      </video>
+    {% else %}
+      <div class="flex aspect-video w-full items-center justify-center bg-gray-900 px-6 text-center text-white">
+        <div>
+          <p class="text-lg font-semibold">
+            {% if video.status.value == "ready" %}Видео недоступно{% else %}Видео обрабатывается{% endif %}
+          </p>
+          <p class="mt-2 text-sm text-gray-300">
+            {% if video.status.value == "ready" %}
+              Не удалось получить presigned GET URL.
+            {% else %}
+              Статус: {{ video.status.value }}. Страница обновится автоматически.
+            {% endif %}
+          </p>
+        </div>
+      </div>
+    {% endif %}
+
+    <div class="p-5 sm:p-6">
+      <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 class="text-xl font-bold tracking-tight sm:text-2xl">{{ video.title }}</h1>
+          <p class="mt-1 text-sm text-gray-500">
+            Статус: <span class="font-medium">{{ video.status.value }}</span>
+            · Видимость: {{ video.visibility.value }}
+          </p>
+        </div>
+        <a href="/upload" class="inline-flex items-center justify-center rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100">
+          Загрузить ещё
+        </a>
+      </div>
+
+      {% if video.description %}
+        <p class="mt-4 whitespace-pre-line text-sm text-gray-700 sm:text-base">{{ video.description }}</p>
+      {% endif %}
+    </div>
+  </div>
+</section>
+
+{% if video.status.value != "ready" %}
+<script>
+  window.setTimeout(function () { window.location.reload(); }, 3000);
+</script>
+{% endif %}
+{% endblock %}

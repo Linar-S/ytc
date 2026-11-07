@@ -60,3 +60,17 @@ def require_role(*roles: UserRole | str) -> Callable[..., object]:
         return current_user
 
     return role_checker
+
+
+async def get_optional_current_user(
+    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(bearer_scheme)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> User | None:
+    """Return the current user when a valid token is supplied, otherwise None."""
+
+    if credentials is None or credentials.scheme.lower() != "bearer":
+        return None
+    try:
+        return await auth_service.get_user_from_access_token(session, credentials.credentials)
+    except (auth_service.InvalidTokenError, auth_service.AuthConfigurationError):
+        return None

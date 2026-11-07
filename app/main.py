@@ -3,10 +3,11 @@
 import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from minio import Minio
+from fastapi.staticfiles import StaticFiles
 
 from app.config import settings
 from app.database import (
@@ -14,20 +15,18 @@ from app.database import (
     get_session_factory,
     init_engine,
 )
-from app.routers import auth, health
+from app.routers import auth, health, pages, videos
+from app.services import storage
 
 logger = logging.getLogger(__name__)
 
+FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
 
-def _create_minio_client() -> Minio:
+
+def _create_minio_client(endpoint: str | None = None):
     """Build a MinIO client from application settings."""
 
-    return Minio(
-        endpoint=settings.minio_endpoint,
-        access_key=settings.minio_access_key,
-        secret_key=settings.minio_secret_key,
-        secure=settings.minio_secure,
-    )
+    return storage.create_minio_client(endpoint)
 
 
 @asynccontextmanager
@@ -44,24 +43,30 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     app.state.session_factory = get_session_factory()
 
     try:
-        app.state.minio_client = _create_minio_client()
+        internal_client = _create_minio_client()
+        public_client = _create_minio_client(settings.minio_public_endpoint)
+        await storage.ensure_bucket(internal_client, settings.minio_bucket)
+        app.state.minio_client = internal_client
+        app.state.minio_public_client = public_client
     except Exception:
         # Storage is not required for the basic API to start. Transient MinIO
         # configuration/availability issues must not take the whole app down.
-        logger.exception("MinIO client initialization failed")
+        logger.exception("MinIO initialization failed")
         app.state.minio_client = None
+        app.state.minio_public_client = None
     app.state.minio_bucket = settings.minio_bucket
 
     logger.info("Application startup complete")
     try:
         yield
     finally:
-        minio_client = getattr(app.state, "minio_client", None)
-        app.state.minio_client = None
-        if minio_client is not None:
-            close = getattr(minio_client, "close", None)
-            if callable(close):
-                close()
+        for attr in ("minio_client", "minio_public_client"):
+            client = getattr(app.state, attr, None)
+            setattr(app.state, attr, None)
+            if client is not None:
+                close = getattr(client, "close", None)
+                if callable(close):
+                    close()
 
         await dispose_engine()
         logger.info("Application shutdown complete")
@@ -82,7 +87,9 @@ app.add_middleware(
     allow_headers=settings.cors_allow_headers,
 )
 
-# /health is deliberately public. Any future router must declare an auth
-# dependency (explicitly or at router level).
+app.mount("/static", StaticFiles(directory=FRONTEND_DIR / "static"), name="static")
+
 app.include_router(health.router)
 app.include_router(auth.router)
+app.include_router(videos.router)
+app.include_router(pages.router)

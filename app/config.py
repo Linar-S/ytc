@@ -30,6 +30,14 @@ class Settings(BaseSettings):
     debug: bool = False
     api_v1_prefix: str = "/api/v1"
     log_level: str = "INFO"
+    max_video_size_bytes: int = Field(
+        default=2 * 1024**3,
+        validation_alias=AliasChoices("MAX_VIDEO_SIZE_BYTES", "MAX_UPLOAD_SIZE_BYTES"),
+    )
+    upload_url_ttl_seconds: int = Field(
+        default=3600,
+        validation_alias=AliasChoices("UPLOAD_URL_TTL_SECONDS", "PRESIGNED_URL_TTL_SECONDS"),
+    )
 
     # JWT. The aliases match the deployment-facing names in .env.example.
     jwt_secret_key: str = Field(
@@ -56,6 +64,10 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+asyncpg://postgres@localhost:5432/youtube_copy"
     redis_url: str = "redis://localhost:6379/0"
     minio_endpoint: str = "localhost:9000"
+    minio_public_endpoint: str = Field(
+        default="localhost:9000",
+        validation_alias=AliasChoices("MINIO_PUBLIC_ENDPOINT", "MINIO_EXTERNAL_ENDPOINT"),
+    )
     minio_access_key: str = ""
     minio_secret_key: str = ""
     minio_secure: bool = False
