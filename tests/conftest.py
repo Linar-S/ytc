@@ -1,6 +1,10 @@
 """Shared pytest fixtures."""
 
+import os
 from collections.abc import AsyncIterator
+
+# Configure a deterministic development signing key before app settings load.
+os.environ.setdefault("SECRET_KEY", "test-secret-key-for-pytest-only-32chars")
 
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient

@@ -14,7 +14,7 @@ from app.database import (
     get_session_factory,
     init_engine,
 )
-from app.routers import health
+from app.routers import auth, health
 
 logger = logging.getLogger(__name__)
 
@@ -85,3 +85,4 @@ app.add_middleware(
 # /health is deliberately public. Any future router must declare an auth
 # dependency (explicitly or at router level).
 app.include_router(health.router)
+app.include_router(auth.router)
