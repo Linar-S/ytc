@@ -29,6 +29,26 @@ docker compose ps
 Swagger: <http://localhost:8000/docs>, OpenAPI: <http://localhost:8000/openapi.json>.
 MinIO Console: <http://localhost:9001> (minioadmin / change-me-minio по умолчанию).
 
+## Аутентификация (демо)
+
+Первый зарегистрированный пользователь получает роль `admin`, последующие — `user`.
+Access-токен живёт 15 минут, refresh-токен — 7 дней. При обновлении старый refresh
+инвалидируется (ротация с хранением в `refresh_tokens`).
+
+```bash
+curl -s -X POST http://localhost:8000/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"email":"alice@example.com","username":"alice","password":"correct-horse-battery"}'
+
+curl -s -X POST http://localhost:8000/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"alice@example.com","password":"correct-horse-battery"}'
+
+# скопируйте access_token из ответа login
+curl -s http://localhost:8000/auth/me \
+  -H "Authorization: Bearer <ACCESS_TOKEN>"
+```
+
 ## Локальная разработка
 
 ```bash
@@ -50,13 +70,14 @@ app/
   main.py          # FastAPI app + lifespan (DB pool, MinIO client)
   config.py        # pydantic-settings, .env
   database.py      # async engine/session, Base, get_db
+  dependencies.py  # get_current_user, require_role
   routers/         # тонкие HTTP-роутеры
   services/        # бизнес-логика
   repositories/    # SQLAlchemy-запросы
   schemas/         # Pydantic request/response
   models/          # ORM-модели
   workers/         # ARQ WorkerSettings и фоновые задачи
-alembic/           # миграции (0001_initial — пустая)
+alembic/           # миграции схемы и refresh-токенов
 frontend/          # Jinja2-шаблоны и static
 tests/             # pytest + httpx
 docs/              # CHANGELOG и архитектура

@@ -1,6 +1,15 @@
 """Pydantic request and response schemas."""
 
 from app.models.enums import UserRole, VideoStatus, Visibility
+from app.schemas.auth import (
+    LoginRequest,
+    LogoutRequest,
+    MessageResponse,
+    RefreshRequest,
+    RefreshTokenRequest,
+    TokenPair,
+    TokenResponse,
+)
 from app.schemas.comment import CommentCreate, CommentOut, CommentUpdate
 from app.schemas.like import LikeCreate, LikeOut
 from app.schemas.report import ReportCreate, ReportOut
@@ -14,10 +23,17 @@ __all__ = [
     "CommentUpdate",
     "LikeCreate",
     "LikeOut",
+    "LoginRequest",
+    "LogoutRequest",
+    "MessageResponse",
+    "RefreshRequest",
+    "RefreshTokenRequest",
     "ReportCreate",
     "ReportOut",
     "SubscriptionCreate",
     "SubscriptionOut",
+    "TokenPair",
+    "TokenResponse",
     "UserCreate",
     "UserOut",
     "UserRole",
