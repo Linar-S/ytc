@@ -40,6 +40,7 @@
 - seed-скрипт демо-данных и загрузка тестовых объектов в MinIO
 - deploy polish: healthchecks/depends_on, README одной командой, architecture sequence
 - адаптивная полировка шаблонов: mobile-first, скрытие второстепенных nav-элементов
+- one-command launcher scripts/start.sh / start.ps1 и Makefile для запуска
 - заготовки frontend-шаблонов и статики
 
 ## [0.2.0] - 2026-11-07

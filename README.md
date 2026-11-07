@@ -13,17 +13,38 @@ Alembic, MinIO (S3), ARQ + Redis, JWT-аутентификация и Jinja2-ф�
 ## Быстрый старт (одна команда)
 
 ```bash
-cp .env.example .env   # опционально: compose имеет dev-дефолты
-docker compose up -d --build && docker compose exec backend alembic upgrade head && docker compose exec backend python scripts/seed_demo.py
+./scripts/start.sh
 ```
 
-После выполнения откройте <http://localhost:8000> — в ленте будут 5 демо-видео.
-Проверить статусы:
+Скрипт:
+1. создаёт `.env` из `.env.example`, если его нет;
+2. собирает и поднимает контейнеры;
+3. ждёт `GET /health`;
+4. применяет `alembic upgrade head`;
+5. запускает `scripts/seed_demo.py`.
+
+После завершения откройте <http://localhost:8000> — в ленте будут 5 демо-видео.
+Полезные варианты:
 
 ```bash
-docker compose ps
-curl http://localhost:8000/health
-# {"status":"ok"}
+./scripts/start.sh --no-seed   # без демо-данных
+make up                        # то же через Makefile
+make down                      # остановить
+make logs                      # логи
+```
+
+На Windows:
+
+```powershell
+.\scripts\start.ps1
+```
+
+Ручной запуск:
+
+```bash
+docker compose up -d --build && \
+docker compose exec backend alembic upgrade head && \
+docker compose exec backend python scripts/seed_demo.py
 ```
 
 ### Демо-пользователи
