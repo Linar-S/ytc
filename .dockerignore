@@ -1,0 +1,29 @@
+# VCS / tooling
+.git
+.gitignore
+.dshwolf
+
+# Python virtualenvs and caches
+.venv
+venv
+__pycache__
+*.py[cod]
+*.egg-info
+.pytest_cache
+.ruff_cache
+.mypy_cache
+htmlcov
+.coverage
+dist
+build
+
+# Secrets / local config (never bake into an image)
+.env
+.env.*
+!.env.example
+
+# Docs and tests are not needed in the runtime image
+docs
+tests
+*.log
+.DS_Store
