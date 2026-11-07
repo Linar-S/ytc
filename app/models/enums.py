@@ -27,3 +27,12 @@ class Visibility(StrEnum):
     PUBLIC = "public"
     PRIVATE = "private"
     UNLISTED = "unlisted"
+
+
+class ReportReason(StrEnum):
+    """Allowed reasons for reporting a video."""
+
+    SPAM = "spam"
+    ILLEGAL = "illegal"
+    HARASSMENT = "harassment"
+    OTHER = "other"

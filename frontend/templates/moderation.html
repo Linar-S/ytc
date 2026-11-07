@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block title %}Модерация — YouTube-клон{% endblock %}
+
+{% block content %}
+<section class="mx-auto max-w-6xl" id="moderation-page">
+  <div class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm sm:p-8">
+    <h1 class="text-2xl font-bold tracking-tight sm:text-3xl">Модерация</h1>
+    <p class="mt-2 text-sm text-gray-600">Очередь жалоб доступна только moderator/admin.</p>
+
+    <div class="mt-5 rounded-lg border border-amber-200 bg-amber-50 p-4">
+      <label for="moderation-token" class="block text-sm font-medium text-amber-900">Access token</label>
+      <input id="moderation-token" type="password" autocomplete="off"
+             class="mt-2 w-full rounded-lg border border-amber-300 bg-white px-3 py-2 text-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-200"
+             placeholder="Bearer-токен moderator/admin">
+      <p id="moderation-status" class="mt-1 text-xs text-amber-800">Токен хранится только в localStorage.</p>
+    </div>
+  </div>
+
+  <div id="moderation-queue" class="mt-6 space-y-4">
+    <div class="rounded-xl border border-dashed border-gray-300 bg-white p-10 text-center text-gray-500">
+      Введите токен модератора, чтобы загрузить очередь.
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/moderation.js" defer></script>
+{% endblock %}

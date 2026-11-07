@@ -30,7 +30,13 @@
 - выдача доступа к private-видео: `POST/DELETE /videos/{id}/access`
 - модель и Alembic-миграция `0004_video_access`
 - фронтенд: сетка карточек, video-тег, лайк и комментарии на `/watch/{id}`
-- тесты моделей, auth, загрузки, ленты, лайков, комментариев и каналов
+- поиск `GET /search` по title/description только для public+ready
+- жалобы на видео с enum-причинами и rate limit 5/час
+- автоскрытие видео при 5 жалобах от разных пользователей
+- moderation queue и hide/unhide для moderator/admin
+- модель и Alembic-миграция `0005_moderation_actions`
+- фронтенд `/moderation` и кнопка «Пожаловаться» на `/watch`
+- тесты моделей, auth, загрузки, ленты, лайков, комментариев, каналов и модерации
 - заготовки frontend-шаблонов и статики
 
 ## [0.1.0] - 2026-11-07

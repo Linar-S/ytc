@@ -3,8 +3,9 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, model_validator
 
+from app.models.enums import ReportReason
 from app.schemas.common import ORMModel
 
 
@@ -13,7 +14,7 @@ class ReportCreate(BaseModel):
 
     video_id: UUID | None = None
     comment_id: UUID | None = None
-    reason: str = Field(min_length=1, max_length=2000)
+    reason: ReportReason
 
     @model_validator(mode="after")
     def require_target(self) -> "ReportCreate":

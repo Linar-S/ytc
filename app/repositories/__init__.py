@@ -3,7 +3,9 @@
 from app.repositories import (
     comments,
     likes,
+    moderation_actions,
     refresh_tokens,
+    reports,
     subscriptions,
     users,
     video_access,
@@ -13,7 +15,9 @@ from app.repositories import (
 __all__ = [
     "comments",
     "likes",
+    "moderation_actions",
     "refresh_tokens",
+    "reports",
     "subscriptions",
     "users",
     "video_access",

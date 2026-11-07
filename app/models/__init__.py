@@ -1,8 +1,9 @@
 """SQLAlchemy ORM models."""
 
 from app.models.comment import Comment
-from app.models.enums import UserRole, VideoStatus, Visibility
+from app.models.enums import ReportReason, UserRole, VideoStatus, Visibility
 from app.models.like import Like
+from app.models.moderation_action import ModerationAction
 from app.models.refresh_token import RefreshToken
 from app.models.report import Report
 from app.models.subscription import Subscription
@@ -13,8 +14,10 @@ from app.models.video_access import VideoAccess
 __all__ = [
     "Comment",
     "Like",
+    "ModerationAction",
     "RefreshToken",
     "Report",
+    "ReportReason",
     "Subscription",
     "User",
     "UserRole",
