@@ -100,3 +100,41 @@ async def list_channel_videos(
 
     result = await session.scalars(statement)
     return list(result)
+
+
+async def search_public_ready(
+    session: AsyncSession,
+    query: str,
+    offset: int,
+    limit: int,
+) -> list[Video]:
+    """Search public ready videos by title/description."""
+
+    pattern = f"%{query}%"
+    result = await session.scalars(
+        select(Video)
+        .options(selectinload(Video.owner))
+        .where(
+            Video.visibility == Visibility.PUBLIC,
+            Video.status == VideoStatus.READY,
+            or_(Video.title.ilike(pattern), Video.description.ilike(pattern)),
+        )
+        .order_by(Video.created_at.desc())
+        .offset(offset)
+        .limit(limit)
+    )
+    return list(result)
+
+
+async def count_search_public_ready(session: AsyncSession, query: str) -> int:
+    """Count public ready videos matching a search query."""
+
+    pattern = f"%{query}%"
+    value = await session.scalar(
+        select(func.count(Video.id)).where(
+            Video.visibility == Visibility.PUBLIC,
+            Video.status == VideoStatus.READY,
+            or_(Video.title.ilike(pattern), Video.description.ilike(pattern)),
+        )
+    )
+    return int(value or 0)

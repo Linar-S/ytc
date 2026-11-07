@@ -137,3 +137,10 @@ async def channel_page(
             "is_owner": current_user is not None and current_user.id == channel.id,
         },
     )
+
+
+@router.get("/moderation", response_class=HTMLResponse)
+async def moderation_page(request: Request) -> HTMLResponse:
+    """Render the moderator queue shell; data is fetched with an access token."""
+
+    return templates.TemplateResponse(request=request, name="moderation.html", context={})

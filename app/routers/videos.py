@@ -13,6 +13,7 @@ from app.database import get_db
 from app.dependencies import get_current_user, get_optional_current_user
 from app.models import User
 from app.schemas.comment import CommentCreate, CommentOut, PaginatedComments
+from app.schemas.moderation import VideoReportCreate, VideoReportResponse
 from app.schemas.video import (
     LikeStatusResponse,
     PaginatedVideos,
@@ -23,6 +24,7 @@ from app.schemas.video import (
     VideoInitUploadResponse,
     VideoOut,
 )
+from app.services import moderation as moderation_service
 from app.services import social as social_service
 from app.services import videos as video_service
 
@@ -343,3 +345,34 @@ async def revoke_video_access_by_path(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)) from exc
 
     return VideoAccessResponse(video_id=video_id, user_id=user_id, granted=False)
+
+
+@router.post(
+    "/{video_id}/report",
+    response_model=VideoReportResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def report_video(
+    video_id: uuid.UUID,
+    payload: VideoReportCreate,
+    session: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> VideoReportResponse:
+    """Report a video; auto-hides it after five distinct reporters."""
+
+    try:
+        result = await moderation_service.report_video(
+            session, current_user, video_id, payload.reason
+        )
+    except video_service.VideoNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    except moderation_service.RateLimitExceededError as exc:
+        raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail=str(exc)) from exc
+
+    return VideoReportResponse(
+        id=result.report.id,
+        video_id=video_id,
+        reason=payload.reason,
+        report_count=result.report_count,
+        auto_hidden=result.auto_hidden,
+    )

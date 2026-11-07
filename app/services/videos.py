@@ -11,7 +11,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
-from app.models import User, Video, VideoStatus, Visibility
+from app.models import User, UserRole, Video, VideoStatus, Visibility
 from app.repositories import likes as like_repo
 from app.repositories import users as user_repo
 from app.repositories import video_access as video_access_repo
@@ -183,6 +183,13 @@ async def can_view_video(
 ) -> bool:
     """Apply visibility and explicit video_access rules."""
 
+    if video.status is VideoStatus.HIDDEN:
+        if user is None:
+            return False
+        if user.id == video.owner_id:
+            return True
+        return user.role in (UserRole.MODERATOR, UserRole.ADMIN)
+
     if video.visibility is not Visibility.PRIVATE:
         return True
     if user is None:
@@ -335,3 +342,20 @@ async def revoke_video_access(
 
     await video_access_repo.remove_access(session, video.id, target_user_id)
     await session.commit()
+
+
+async def search_videos(
+    session: AsyncSession,
+    query: str,
+    page: int,
+    size: int,
+    minio_client,
+    bucket: str,
+) -> tuple[list[VideoFeedItem], int]:
+    """Search public ready videos by title and description."""
+
+    offset = (page - 1) * size
+    videos = await video_repo.search_public_ready(session, query, offset, size)
+    total = await video_repo.count_search_public_ready(session, query)
+    items = await build_feed_items(session, videos, minio_client, bucket)
+    return items, total

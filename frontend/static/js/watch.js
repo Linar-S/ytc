@@ -108,5 +108,37 @@
     }
   });
 
+
+  const reportButton = document.getElementById("report-button");
+  const reportReason = document.getElementById("report-reason");
+  const reportStatus = document.getElementById("report-status");
+
+  reportButton.addEventListener("click", async function () {
+    if (!token()) {
+      reportStatus.textContent = "Вставьте access token, чтобы отправить жалобу.";
+      return;
+    }
+    reportStatus.textContent = "Отправляем жалобу…";
+    try {
+      const response = await fetch("/videos/" + encodeURIComponent(videoId) + "/report", {
+        method: "POST",
+        headers: {
+          Authorization: "Bearer " + token(),
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ reason: reportReason.value })
+      });
+      const body = await response.json().catch(function () { return {}; });
+      if (!response.ok) {
+        throw new Error(typeof body.detail === "string" ? body.detail : "Не удалось отправить жалобу");
+      }
+      reportStatus.textContent = body.auto_hidden
+        ? "Жалоба принята. Видео автоматически скрыто."
+        : "Жалоба принята.";
+    } catch (error) {
+      reportStatus.textContent = error.message;
+    }
+  });
+
   refreshLikeState();
 })();

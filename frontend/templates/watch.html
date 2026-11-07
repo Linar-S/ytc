@@ -51,6 +51,19 @@
         <p class="mt-4 whitespace-pre-line text-sm text-gray-700 sm:text-base">{{ video.description }}</p>
       {% endif %}
 
+      <div class="mt-4 flex flex-col gap-2 rounded-lg border border-red-100 bg-red-50 p-4 sm:flex-row sm:items-center">
+        <label for="report-reason" class="text-sm font-medium text-red-900">Пожаловаться:</label>
+        <select id="report-reason" class="rounded-lg border border-red-200 bg-white px-3 py-2 text-sm">
+          <option value="spam">Спам</option>
+          <option value="illegal">Незаконный контент</option>
+          <option value="harassment">Оскорбления</option>
+          <option value="other">Другое</option>
+        </select>
+        <button id="report-button" type="button" class="inline-flex items-center justify-center rounded-lg border border-red-300 px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-100">
+          Отправить жалобу
+        </button>
+        <p id="report-status" class="text-xs text-red-800"></p>
+      </div>
       <div class="mt-6 rounded-lg border border-amber-200 bg-amber-50 p-4">
         <label for="watch-token" class="block text-sm font-medium text-amber-900">Access token для лайка и комментария</label>
         <input id="watch-token" type="password" autocomplete="off"

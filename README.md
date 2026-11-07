@@ -128,6 +128,31 @@ curl -s -X POST http://localhost:8000/videos/<VIDEO_ID>/access \
 Страница `/channel/{id}` показывает шапку канала, кнопку подписки и адаптивную
 сетку видео. Владелец видит свои private-видео с бейджем «Приватное»; пользователь
 с выданным доступом тоже видит их после ввода access token.
+## Поиск и модерация
+
+```bash
+# Поиск по названию/описанию: только public + ready
+curl -s "http://localhost:8000/search?q=demo&page=1&size=20"
+
+# Жалоба на видео (reason: spam | illegal | harassment | other)
+curl -s -X POST http://localhost:8000/videos/<VIDEO_ID>/report \
+  -H "Authorization: Bearer <ACCESS_TOKEN>" \
+  -H "Content-Type: application/json" \
+  -d '{"reason":"spam"}'
+
+# Очередь модерации и hide/unhide (moderator/admin)
+curl -s http://localhost:8000/moderation/queue \
+  -H "Authorization: Bearer <MODERATOR_TOKEN>"
+curl -s -X POST http://localhost:8000/moderation/videos/<VIDEO_ID>/hide \
+  -H "Authorization: Bearer <MODERATOR_TOKEN>"
+curl -s -X POST http://localhost:8000/moderation/videos/<VIDEO_ID>/unhide \
+  -H "Authorization: Bearer <MODERATOR_TOKEN>"
+```
+
+Скрытое видео исчезает из публичной ленты и поиска, но остаётся доступным
+напрямую модератору/админу и владельцу. Жалобы ограничены 5 в час на пользователя;
+при 5 жалобах от разных пользователей видео скрывается автоматически.
+Страница `/moderation` показывает очередь и кнопки Hide/Unhide после ввода токена.
 ## Локальная разработка
 
 ```bash
