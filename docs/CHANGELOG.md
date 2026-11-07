@@ -21,8 +21,12 @@
 - direct-to-MinIO загрузка видео через presigned PUT URL
 - endpoints `/videos/init-upload` и `/videos/{id}/complete-upload`
 - ARQ-задача `process_video` с placeholder-превью и статусом `ready`
-- страницы `/upload` (XHR progress bar) и `/watch/{id}` с presigned GET URL
-- тесты моделей, auth-сценариев и загрузки видео с mock MinIO
+- публичная лента `GET /videos` с пагинацией и presigned thumbnail URL
+- `GET /videos/{id}` с presigned playback URL TTL 6 часов и проверкой доступа
+- идемпотентные `POST/DELETE /videos/{id}/like` с агрегированным счётчиком
+- `GET/POST /videos/{id}/comments` с пагинацией и auth для создания
+- фронтенд: сетка карточек на главной, video-тег, лайк и комментарии на `/watch/{id}`
+- тесты моделей, auth, загрузки, ленты, лайков и комментариев
 - заготовки frontend-шаблонов и статики
 
 ## [0.1.0] - 2026-11-07

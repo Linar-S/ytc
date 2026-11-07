@@ -1,5 +1,5 @@
 """SQLAlchemy query repositories."""
 
-from app.repositories import refresh_tokens, users, videos
+from app.repositories import comments, likes, refresh_tokens, users, videos
 
-__all__ = ["refresh_tokens", "users", "videos"]
+__all__ = ["comments", "likes", "refresh_tokens", "users", "videos"]

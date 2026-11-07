@@ -78,6 +78,32 @@ curl -s -X POST http://localhost:8000/videos/<VIDEO_ID>/complete-upload \
 выберите файл. XHR показывает прогресс, после загрузки происходит redirect на
 `/watch/{id}`, где доступен presigned GET URL.
 
+## Лента, просмотр и социальные действия
+
+```bash
+# Публичная лента: только public + ready, newest first
+curl -s "http://localhost:8000/videos?page=1&size=20"
+
+# Метаданные + presigned playback URL (TTL 6 часов)
+curl -s http://localhost:8000/videos/<VIDEO_ID> \
+  -H "Authorization: Bearer <ACCESS_TOKEN>"
+
+# Идемпотентный лайк и снятие лайка
+curl -s -X POST http://localhost:8000/videos/<VIDEO_ID>/like \
+  -H "Authorization: Bearer <ACCESS_TOKEN>"
+curl -s -X DELETE http://localhost:8000/videos/<VIDEO_ID>/like \
+  -H "Authorization: Bearer <ACCESS_TOKEN>"
+
+# Комментарии: список публичный, создание требует auth
+curl -s "http://localhost:8000/videos/<VIDEO_ID>/comments?page=1&size=20"
+curl -s -X POST http://localhost:8000/videos/<VIDEO_ID>/comments \
+  -H "Authorization: Bearer <ACCESS_TOKEN>" \
+  -H "Content-Type: application/json" \
+  -d '{"content":"Отличное видео!"}'
+```
+
+Главная `/` показывает адаптивную сетку карточек (1 колонка на mobile,
+3–4 на desktop), `/watch/{id}` — video-тег, лайк, форму и список комментариев.
 ## Локальная разработка
 
 ```bash

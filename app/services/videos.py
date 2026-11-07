@@ -11,8 +11,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.models import User, Video, VideoStatus, Visibility
+from app.repositories import likes as like_repo
 from app.repositories import videos as video_repo
-from app.schemas.video import VideoInitUploadRequest
+from app.schemas.video import (
+    VideoDetailOut,
+    VideoFeedItem,
+    VideoInitUploadRequest,
+    VideoOut,
+)
 from app.services import storage
 from app.services.queue import enqueue_process_video
 
@@ -39,6 +45,10 @@ class UploadedObjectNotFoundError(VideoUploadError):
 
 class QueueUnavailableError(VideoUploadError):
     """Raised when the processing task could not be enqueued."""
+
+
+class AccessDeniedError(VideoUploadError):
+    """Raised when a private video is requested by a non-owner."""
 
 
 @dataclass(frozen=True)
@@ -157,3 +167,101 @@ async def get_playback_url(minio_client, bucket: str, video: Video) -> str | Non
     if not video.storage_key:
         return None
     return await storage.presigned_get_url(minio_client, bucket, video.storage_key)
+
+
+def can_view_video(video: Video, user: User | None) -> bool:
+    """Apply visibility rules for direct video/comments access."""
+
+    if video.visibility is Visibility.PRIVATE:
+        return user is not None and user.id == video.owner_id
+    return True
+
+
+async def get_video_for_view(
+    session: AsyncSession,
+    video_id: uuid.UUID,
+    user: User | None,
+) -> Video:
+    """Load a video and enforce private-video access rules."""
+
+    video = await video_repo.get_with_owner(session, video_id)
+    if video is None:
+        raise VideoNotFoundError("Video not found")
+    if not can_view_video(video, user):
+        raise AccessDeniedError("Access denied")
+    return video
+
+
+async def _get_url(
+    client,
+    bucket: str,
+    object_key: str | None,
+) -> str | None:
+    """Return a presigned GET URL when a client and key are available."""
+
+    if client is None or not object_key:
+        return None
+    return await storage.presigned_get_url(
+        client,
+        bucket,
+        object_key,
+        expires=timedelta(seconds=settings.playback_url_ttl_seconds),
+    )
+
+
+async def list_feed(
+    session: AsyncSession,
+    page: int,
+    size: int,
+    minio_client,
+    bucket: str,
+) -> tuple[list[VideoFeedItem], int]:
+    """Return a paginated public-ready feed with thumbnails and like counts."""
+
+    offset = (page - 1) * size
+    videos = await video_repo.list_public_ready(session, offset, size)
+    total = await video_repo.count_public_ready(session)
+    counts = await like_repo.counts_for_videos(session, [video.id for video in videos])
+
+    items: list[VideoFeedItem] = []
+    for video in videos:
+        base = VideoOut.model_validate(video).model_dump()
+        items.append(
+            VideoFeedItem(
+                **base,
+                owner_username=video.owner.username if video.owner else None,
+                thumbnail_url=await _get_url(minio_client, bucket, video.thumbnail_key),
+                like_count=counts.get(video.id, 0),
+            )
+        )
+    return items, total
+
+
+async def get_video_detail(
+    session: AsyncSession,
+    video_id: uuid.UUID,
+    user: User | None,
+    minio_client,
+    bucket: str,
+) -> VideoDetailOut:
+    """Return video metadata, playback URL and per-user like state."""
+
+    video = await get_video_for_view(session, video_id, user)
+    base = VideoOut.model_validate(video).model_dump()
+    playback_url = None
+    if video.status is VideoStatus.READY:
+        playback_url = await _get_url(minio_client, bucket, video.storage_key)
+
+    like_count = await like_repo.count_for_video(session, video.id)
+    liked = False
+    if user is not None:
+        liked = await like_repo.is_liked(session, user.id, video.id)
+
+    return VideoDetailOut(
+        **base,
+        owner_username=video.owner.username if video.owner else None,
+        thumbnail_url=await _get_url(minio_client, bucket, video.thumbnail_key),
+        like_count=like_count,
+        playback_url=playback_url,
+        liked=liked,
+    )
