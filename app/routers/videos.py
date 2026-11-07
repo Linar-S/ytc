@@ -1,18 +1,27 @@
-"""Video upload and processing endpoints."""
+"""Video upload, feed, playback and social endpoints."""
 
 from __future__ import annotations
 
 import uuid
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.database import get_db
-from app.dependencies import get_current_user
+from app.dependencies import get_current_user, get_optional_current_user
 from app.models import User
-from app.schemas.video import VideoInitUploadRequest, VideoInitUploadResponse, VideoOut
+from app.schemas.comment import CommentCreate, CommentOut, PaginatedComments
+from app.schemas.video import (
+    LikeStatusResponse,
+    PaginatedVideos,
+    VideoDetailOut,
+    VideoInitUploadRequest,
+    VideoInitUploadResponse,
+    VideoOut,
+)
+from app.services import social as social_service
 from app.services import videos as video_service
 
 router = APIRouter(prefix="/videos", tags=["videos"])
@@ -40,8 +49,41 @@ def _public_minio_client(request: Request):
     return client
 
 
+def _optional_minio_client(request: Request):
+    return getattr(request.app.state, "minio_public_client", None) or getattr(
+        request.app.state, "minio_client", None
+    )
+
+
 def _bucket(request: Request) -> str:
     return getattr(request.app.state, "minio_bucket", settings.minio_bucket)
+
+
+def _raise_video_lookup_error(exc: Exception) -> None:
+    if isinstance(exc, video_service.VideoNotFoundError):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    if isinstance(exc, video_service.AccessDeniedError):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)) from exc
+    raise exc
+
+
+@router.get("", response_model=PaginatedVideos)
+async def list_videos(
+    request: Request,
+    session: Annotated[AsyncSession, Depends(get_db)],
+    page: Annotated[int, Query(ge=1)] = 1,
+    size: Annotated[int, Query(ge=1, le=100)] = 20,
+) -> PaginatedVideos:
+    """Return only public, ready videos ordered newest first."""
+
+    items, total = await video_service.list_feed(
+        session,
+        page,
+        size,
+        _optional_minio_client(request),
+        _bucket(request),
+    )
+    return PaginatedVideos(items=items, total=total, page=page)
 
 
 @router.post(
@@ -135,3 +177,108 @@ async def complete_upload(
         ) from exc
 
     return VideoOut.model_validate(video)
+
+
+@router.get("/{video_id}", response_model=VideoDetailOut)
+async def get_video(
+    video_id: uuid.UUID,
+    request: Request,
+    session: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User | None, Depends(get_optional_current_user)],
+) -> VideoDetailOut:
+    """Return video metadata plus a 6-hour presigned playback URL."""
+
+    try:
+        return await video_service.get_video_detail(
+            session,
+            video_id,
+            current_user,
+            _optional_minio_client(request),
+            _bucket(request),
+        )
+    except (video_service.VideoNotFoundError, video_service.AccessDeniedError) as exc:
+        _raise_video_lookup_error(exc)
+        raise  # pragma: no cover
+
+
+@router.post("/{video_id}/like", response_model=LikeStatusResponse)
+async def like_video(
+    video_id: uuid.UUID,
+    session: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> LikeStatusResponse:
+    """Idempotently like a video."""
+
+    try:
+        await video_service.get_video_for_view(session, video_id, current_user)
+    except (video_service.VideoNotFoundError, video_service.AccessDeniedError) as exc:
+        _raise_video_lookup_error(exc)
+        raise  # pragma: no cover
+
+    liked, like_count = await social_service.like_video(session, current_user.id, video_id)
+    return LikeStatusResponse(liked=liked, like_count=like_count)
+
+
+@router.delete("/{video_id}/like", response_model=LikeStatusResponse)
+async def unlike_video(
+    video_id: uuid.UUID,
+    session: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> LikeStatusResponse:
+    """Idempotently remove a like from a video."""
+
+    try:
+        await video_service.get_video_for_view(session, video_id, current_user)
+    except (video_service.VideoNotFoundError, video_service.AccessDeniedError) as exc:
+        _raise_video_lookup_error(exc)
+        raise  # pragma: no cover
+
+    liked, like_count = await social_service.unlike_video(session, current_user.id, video_id)
+    return LikeStatusResponse(liked=liked, like_count=like_count)
+
+
+@router.get("/{video_id}/comments", response_model=PaginatedComments)
+async def list_comments(
+    video_id: uuid.UUID,
+    session: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User | None, Depends(get_optional_current_user)],
+    page: Annotated[int, Query(ge=1)] = 1,
+    size: Annotated[int, Query(ge=1, le=100)] = 20,
+) -> PaginatedComments:
+    """Return a newest-first page of comments."""
+
+    try:
+        await video_service.get_video_for_view(session, video_id, current_user)
+    except (video_service.VideoNotFoundError, video_service.AccessDeniedError) as exc:
+        _raise_video_lookup_error(exc)
+        raise  # pragma: no cover
+
+    items, total = await social_service.list_comments(session, video_id, page, size)
+    return PaginatedComments(items=items, total=total, page=page)
+
+
+@router.post(
+    "/{video_id}/comments",
+    response_model=CommentOut,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_comment(
+    video_id: uuid.UUID,
+    payload: CommentCreate,
+    session: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> CommentOut:
+    """Add a comment to a video (auth required)."""
+
+    try:
+        await video_service.get_video_for_view(session, video_id, current_user)
+    except (video_service.VideoNotFoundError, video_service.AccessDeniedError) as exc:
+        _raise_video_lookup_error(exc)
+        raise  # pragma: no cover
+
+    return await social_service.create_comment(
+        session,
+        video_id,
+        current_user,
+        payload.content,
+    )

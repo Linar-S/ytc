@@ -74,3 +74,33 @@ class VideoOut(ORMModel):
     views_count: int
     created_at: datetime
     updated_at: datetime
+
+
+class VideoFeedItem(VideoOut):
+    """Feed card with thumbnail and aggregated like count."""
+
+    owner_username: str | None = None
+    thumbnail_url: str | None = None
+    like_count: int = 0
+
+
+class VideoDetailOut(VideoFeedItem):
+    """Video metadata plus playback URL and current-user like state."""
+
+    playback_url: str | None = None
+    liked: bool = False
+
+
+class PaginatedVideos(BaseModel):
+    """Paginated public video feed."""
+
+    items: list[VideoFeedItem]
+    total: int
+    page: int
+
+
+class LikeStatusResponse(BaseModel):
+    """Idempotent like/unlike result."""
+
+    liked: bool
+    like_count: int

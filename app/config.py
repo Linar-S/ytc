@@ -39,6 +39,11 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices("UPLOAD_URL_TTL_SECONDS", "PRESIGNED_URL_TTL_SECONDS"),
     )
 
+    playback_url_ttl_seconds: int = Field(
+        default=6 * 3600,
+        validation_alias=AliasChoices("PLAYBACK_URL_TTL_SECONDS", "VIDEO_URL_TTL_SECONDS"),
+    )
+
     # JWT. The aliases match the deployment-facing names in .env.example.
     jwt_secret_key: str = Field(
         default="",

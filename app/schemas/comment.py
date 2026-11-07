@@ -13,7 +13,7 @@ class CommentCreate(BaseModel):
 
     content: str = Field(
         min_length=1,
-        max_length=5000,
+        max_length=2000,
         validation_alias=AliasChoices("content", "text"),
     )
 
@@ -29,7 +29,7 @@ class CommentUpdate(BaseModel):
 
     content: str = Field(
         min_length=1,
-        max_length=5000,
+        max_length=2000,
         validation_alias=AliasChoices("content", "text"),
     )
 
@@ -46,6 +46,7 @@ class CommentOut(ORMModel):
     id: UUID
     video_id: UUID
     author_id: UUID
+    author_username: str | None = None
     content: str = Field(validation_alias=AliasChoices("content", "text"))
     created_at: datetime
     updated_at: datetime
@@ -55,3 +56,11 @@ class CommentOut(ORMModel):
         """Compatibility alias for clients that call the field ``text``."""
 
         return self.content
+
+
+class PaginatedComments(BaseModel):
+    """Paginated comments for one video."""
+
+    items: list[CommentOut]
+    total: int
+    page: int
