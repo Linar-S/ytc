@@ -1,4 +1,4 @@
-﻿__pycache__/
+__pycache__/
 *.py[cod]
 *.egg-info/
 .venv/
@@ -14,3 +14,4 @@ build/
 *.log
 .DS_Store
 .dshwolf/
+pytest-cache-files-*
